@@ -29,6 +29,7 @@ Copy `config.example.json` to `config.json` and customize:
   "baseUrl": "http://localhost:8080",
   "outputDir": "output",
   "threshold": 0.1,
+  "failureThreshold": 1.0,
   "viewports": [
     { "name": "desktop", "width": 1440, "height": 900, "deviceScaleFactor": 1 },
     { "name": "mobile", "width": 390, "height": 844, "deviceScaleFactor": 2 }
@@ -67,10 +68,39 @@ npm run compare
 |--------|------|-------------|---------|
 | `baseUrl` | string | Base URL of your application | `http://localhost:8080/` |
 | `outputDir` | string | Directory for screenshots and diffs | `output` |
-| `threshold` | number | Pixel matching threshold (0-1) | `0.1` |
+| `threshold` | number | Pixel matching threshold (0-1) for pixelmatch | `0.1` |
+| `failureThreshold` | number | Percentage difference to consider as failure (%) | `0.5` |
 | `viewports` | array | List of viewport configurations | See below |
 | `globalActions` | array | Actions to run once before all pages | `[]` |
 | `pages` | array | List of pages to capture and compare | `[]` |
+
+### Understanding Thresholds
+
+The tool uses two threshold values to give you fine-grained control over what constitutes a failure:
+
+#### `threshold` (Pixel Matching Sensitivity)
+- Range: `0.0` to `1.0`
+- Controls how similar two pixels need to be to be considered "matching"
+- Lower values = stricter matching (more sensitive to tiny color differences)
+- Higher values = looser matching (more forgiving of minor color variations)
+- Default: `0.1` (recommended for most cases)
+- This is passed directly to pixelmatch library
+
+#### `failureThreshold` (Failure Percentage)
+- Range: `0` to `100` (percentage)
+- Controls what percentage of different pixels causes the test to FAIL
+- Differences below this threshold are marked as "ACCEPTABLE" (exit code 0)
+- Differences above this threshold are marked as "FAILURE" (exit code 1)
+- Default: `0.5%`
+- Examples:
+  - `0.1` = Fail if more than 0.1% of pixels differ (very strict)
+  - `1.0` = Fail if more than 1% of pixels differ (recommended)
+  - `5.0` = Fail if more than 5% of pixels differ (lenient)
+
+**Example scenarios:**
+- **0.00% difference**: Perfect match ✅
+- **0.05% difference** (with `failureThreshold: 1.0`): Acceptable ⚠️ (minor anti-aliasing differences)
+- **2.50% difference** (with `failureThreshold: 1.0`): Failure ❌ (significant visual differences)
 
 ### Viewport Configuration
 
@@ -250,12 +280,22 @@ Pages: 1
 ```
 🔍 Comparing Images
 ============================================================
+Pixel threshold: 0.1
+Failure threshold: 1%
 
 Comparing: dashboard-desktop
-  Design: designs/dashboard.png
-  Screenshot: dashboard-desktop.png
-  ❌ MISMATCH: 17 pixels different (0.00%)
+  Design: designs/dashboard.png (1440x900)
+  Screenshot: dashboard-desktop.png (1440x900)
+  ⚠️  ACCEPTABLE: 17 of 1,296,000 pixels different (0.00%)
+     Within acceptable threshold of 1%
   📄 Diff saved: dashboard-desktop.diff.png
+
+Comparing: dashboard-mobile
+  Design: designs/dashboard.png (1440x900)
+  Screenshot: dashboard-mobile.png (390x1250)
+  ❌ FAILURE: 386,598 of 487,500 pixels different (79.30%)
+     Exceeds failure threshold of 1%
+  📄 Diff saved: dashboard-mobile.diff.png
 ```
 
 ### Summary Report
@@ -268,14 +308,21 @@ Comparing: dashboard-desktop
 
 📈 Results:
   Total comparisons: 2
-  Matches: 0
-  Mismatches: 2
+  Perfect matches: 0
+  Acceptable differences: 1
+  Failures: 1
+  Average difference: 39.65%
+  Maximum difference: 79.30%
+  Failure threshold: 1%
 
   Details:
-    ❌ dashboard-desktop: 0.00% difference
-    ❌ dashboard-mobile: 79.30% difference
+    ⚠️ ACCEPTABLE: dashboard-desktop - 0.00% difference (17 pixels)
+    ❌ FAIL: dashboard-mobile - 79.30% difference (386,598 pixels)
 
-⏱ Total execution time: 10.95s
+⏱ Total execution time: 10.96s
+============================================================
+
+❌ Visual comparison FAILED: 1 comparison(s) exceeded 1% threshold (avg 79.30% difference)
 ```
 
 ## Output Files
@@ -294,38 +341,69 @@ Visual diff images are saved to `output/diffs/`:
 
 ## Exit Codes
 
-- **0**: All comparisons passed (no visual differences)
-- **1**: Visual mismatches detected or errors occurred
+- **0**: All comparisons passed
+  - All images are perfect matches (0% difference), OR
+  - All differences are within acceptable `failureThreshold`
+- **1**: Visual comparison failed
+  - One or more comparisons exceeded the `failureThreshold`, OR
+  - Errors occurred during execution
 
-This makes it easy to integrate with CI/CD pipelines.
+This makes it easy to integrate with CI/CD pipelines while allowing for acceptable minor differences (e.g., anti-aliasing, font rendering variations).
 
 ## Best Practices
 
-### 1. Design Export Preparation
+### 1. Setting Appropriate Thresholds
+
+Choose your `failureThreshold` based on your use case:
+
+**Strict (0.1% - 0.5%)**
+- Use when: Pixel-perfect accuracy is required
+- Good for: Marketing pages, brand-critical layouts
+- Warning: May flag minor anti-aliasing differences
+
+**Recommended (1.0% - 2.0%)**
+- Use when: General UI testing with some tolerance
+- Good for: Most web applications
+- Allows: Minor font rendering and anti-aliasing variations
+
+**Lenient (3.0% - 5.0%)**
+- Use when: Testing dynamic content or data-heavy pages
+- Good for: Dashboards with charts, user-generated content
+- Allows: Moderate visual variations
+
+**Example configurations:**
+```json
+{
+  "threshold": 0.1,
+  "failureThreshold": 1.0  // Recommended starting point
+}
+```
+
+### 2. Design Export Preparation
 - ✅ Export designs at the exact viewport dimensions you're testing
 - ✅ Use consistent device scale factors
 - ✅ Export as PNG for best quality
 - ❌ Avoid JPEG (lossy compression causes false positives)
 
-### 2. Test Data Management
+### 3. Test Data Management
 - ✅ Use deterministic, seeded test data
 - ✅ Set up dedicated test/QA users
 - ✅ Mock time-sensitive data (dates, timestamps)
 - ❌ Avoid random data or live API calls
 
-### 3. Authentication
+### 4. Authentication
 - ✅ Use `globalActions` for login flows
 - ✅ Set auth cookies or tokens via `setCookie` or `setLocalStorage`
 - ✅ Create test users with predictable data
 - ❌ Avoid manual login or production credentials
 
-### 4. SPA Considerations
+### 5. SPA Considerations
 - ✅ Use `waitForSelector` instead of `waitForNavigation` for route changes
 - ✅ Wait for specific elements that indicate the page is ready
 - ✅ Use `waitForTimeout` as a last resort for animations
 - ❌ Don't rely solely on URL changes for navigation detection
 
-### 5. Handling Dynamic Content
+### 6. Handling Dynamic Content
 ```json
 {
   "actions": [

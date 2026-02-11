@@ -1,6 +1,6 @@
 const fs = require("fs/promises");
 const path = require("path");
-const { existsSync } = require("fs");
+const { existsSync } = require("node:fs");
 const { chromium } = require("playwright");
 const pixelmatch = require("pixelmatch");
 const { PNG } = require("pngjs");
@@ -10,6 +10,7 @@ const DEFAULT_CONFIG = {
   baseUrl: "http://localhost:8080/",
   outputDir: "output",
   threshold: 0.1,
+  failureThreshold: 0.5,
   viewports: [
     { name: "desktop", width: 1440, height: 900, deviceScaleFactor: 1 }
   ],
@@ -54,7 +55,7 @@ const resizeImage = async (imagePath, width, height) => {
 };
 
 const normalizeName = (value) =>
-  value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+  value.toLowerCase().replaceAll(/[^a-z0-9]+/g, "-").replaceAll(/^-|-$/g, "");
 
 const resolveConfig = async () => {
   const configPath = path.resolve(parseArgs());
@@ -347,9 +348,12 @@ const compareImages = async (configDir, outputDir, config, entries) => {
 
   console.log(`\n${'='.repeat(60)}`);
   console.log(`🔍 Comparing Images`);
-  console.log(`${'='.repeat(60)}\n`);
+  console.log(`${'='.repeat(60)}`);
+  console.log(`Pixel threshold: ${config.threshold}`);
+  console.log(`Failure threshold: ${config.failureThreshold}%\n`);
 
   let mismatches = 0;
+  let failures = 0;
   const warnings = [];
   const comparisonResults = [];
 
@@ -399,19 +403,29 @@ const compareImages = async (configDir, outputDir, config, entries) => {
     const diffPath = path.join(diffsDir, `${entry.name}.diff.png`);
     await savePng(diff, diffPath);
 
+    const diffPercent = parseFloat(diffPercentage);
+    const isFailure = diffPercent > config.failureThreshold;
+    
     if (diffPixels > 0) {
       mismatches += 1;
-      console.log(`    ❌ MISMATCH: ${diffPixels.toLocaleString()} of ${totalPixels.toLocaleString()} pixels different (${diffPercentage}%)`);
+      if (isFailure) {
+        failures += 1;
+        console.log(`    ❌ FAILURE: ${diffPixels.toLocaleString()} of ${totalPixels.toLocaleString()} pixels different (${diffPercentage}%)`);
+        console.log(`       Exceeds failure threshold of ${config.failureThreshold}%`);
+      } else {
+        console.log(`    ⚠️  ACCEPTABLE: ${diffPixels.toLocaleString()} of ${totalPixels.toLocaleString()} pixels different (${diffPercentage}%)`);
+        console.log(`       Within acceptable threshold of ${config.failureThreshold}%`);
+      }
       console.log(`    📄 Diff saved: ${path.basename(diffPath)}`);
-      comparisonResults.push({ name: entry.name, diffPixels, diffPercentage, match: false });
+      comparisonResults.push({ name: entry.name, diffPixels, diffPercentage, match: false, failure: isFailure });
     } else {
       console.log(`    ✅ MATCH: ${totalPixels.toLocaleString()} pixels identical (0.00% difference)`);
-      comparisonResults.push({ name: entry.name, diffPixels: 0, diffPercentage: '0.00', match: true });
+      comparisonResults.push({ name: entry.name, diffPixels: 0, diffPercentage: '0.00', match: true, failure: false });
     }
     console.log('');
   }
 
-  return { mismatches, warnings, comparisonResults };
+  return { mismatches, failures, warnings, comparisonResults };
 };
 
 const main = async () => {
@@ -453,8 +467,9 @@ const main = async () => {
 
     console.log(`\n📈 Results:`);
     console.log(`  Total comparisons: ${result.comparisonResults?.length || 0}`);
-    console.log(`  Matches: ${result.comparisonResults?.filter(r => r.match).length || 0}`);
-    console.log(`  Mismatches: ${result.mismatches}`);
+    console.log(`  Perfect matches: ${result.comparisonResults?.filter(r => r.match).length || 0}`);
+    console.log(`  Acceptable differences: ${result.comparisonResults?.filter(r => !r.match && !r.failure).length || 0}`);
+    console.log(`  Failures: ${result.failures || 0}`);
 
     if (result.comparisonResults && result.comparisonResults.length > 0) {
       // Calculate statistics
@@ -464,12 +479,23 @@ const main = async () => {
       
       console.log(`  Average difference: ${avgDiff}%`);
       console.log(`  Maximum difference: ${maxDiff}%`);
+      console.log(`  Failure threshold: ${config.failureThreshold}%`);
 
       console.log(`\n  Details:`);
       for (const r of result.comparisonResults) {
-        const icon = r.match ? '✅' : '❌';
+        let icon, status;
+        if (r.match) {
+          icon = '✅';
+          status = 'MATCH';
+        } else if (r.failure) {
+          icon = '❌';
+          status = 'FAIL';
+        } else {
+          icon = '⚠️';
+          status = 'ACCEPTABLE';
+        }
         const pixelInfo = r.diffPixels > 0 ? ` (${r.diffPixels.toLocaleString()} pixels)` : '';
-        console.log(`    ${icon} ${r.name}: ${r.diffPercentage}% difference${pixelInfo}`);
+        console.log(`    ${icon} ${status}: ${r.name} - ${r.diffPercentage}% difference${pixelInfo}`);
       }
     }
 
@@ -477,15 +503,21 @@ const main = async () => {
     console.log(`\n⏱ Total execution time: ${totalTime}s`);
     console.log(`${'='.repeat(60)}\n`);
 
-    if (result.mismatches > 0) {
-      const mismatchedResults = result.comparisonResults?.filter(r => !r.match) || [];
-      const avgMismatchDiff = mismatchedResults.length > 0 
-        ? (mismatchedResults.reduce((sum, r) => sum + parseFloat(r.diffPercentage), 0) / mismatchedResults.length).toFixed(2)
+    if (result.failures > 0) {
+      const failedResults = result.comparisonResults?.filter(r => r.failure) || [];
+      const avgFailureDiff = failedResults.length > 0 
+        ? (failedResults.reduce((sum, r) => sum + parseFloat(r.diffPercentage), 0) / failedResults.length).toFixed(2)
         : '0.00';
-      console.error(`❌ Visual mismatches detected: ${result.mismatches} (avg ${avgMismatchDiff}% difference)`);
+      console.error(`❌ Visual comparison FAILED: ${result.failures} comparison(s) exceeded ${config.failureThreshold}% threshold (avg ${avgFailureDiff}% difference)`);
       exitCode = 1;
+    } else if (result.mismatches > 0) {
+      const acceptableResults = result.comparisonResults?.filter(r => !r.match && !r.failure) || [];
+      const avgAcceptableDiff = acceptableResults.length > 0 
+        ? (acceptableResults.reduce((sum, r) => sum + parseFloat(r.diffPercentage), 0) / acceptableResults.length).toFixed(2)
+        : '0.00';
+      console.log(`✅ Visual comparison PASSED: ${result.mismatches} comparison(s) with acceptable differences (avg ${avgAcceptableDiff}%, within ${config.failureThreshold}% threshold)`);
     } else {
-      console.log("✅ No visual mismatches detected. All images match 100%!");
+      console.log("✅ Visual comparison PASSED: All images match 100%!");
     }
   } finally {
     await browser.close();

@@ -36,3 +36,4 @@ _ReSharper*/
 .idea/
 #Nuget packages folder
 packages/
+/.scannerwork/report-task.txt

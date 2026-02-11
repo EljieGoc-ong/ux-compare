@@ -2,6 +2,7 @@
   "baseUrl": "http://localhost:8080",
   "outputDir": "output",
   "threshold": 0.1,
+  "failureThreshold": 5.0,
   "viewports": [
     { "name": "desktop", "width": 1440, "height": 900, "deviceScaleFactor": 1 },
     { "name": "mobile", "width": 390, "height": 844, "deviceScaleFactor": 2 }
