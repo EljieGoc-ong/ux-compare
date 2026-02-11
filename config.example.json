@@ -1,0 +1,31 @@
+{
+  "baseUrl": "http://localhost:5173/",
+  "outputDir": "output",
+  "threshold": 0.1,
+  "viewports": [
+    { "name": "desktop", "width": 1440, "height": 900, "deviceScaleFactor": 1 },
+    { "name": "mobile", "width": 390, "height": 844, "deviceScaleFactor": 2 }
+  ],
+  "globalActions": [
+    { "type": "goto", "url": "/login" },
+    { "type": "type", "selector": "[name=email]", "text": "qa@example.com" },
+    { "type": "type", "selector": "[name=password]", "text": "password123" },
+    { "type": "click", "selector": "button[type=submit]" },
+    { "type": "waitForSelector", "selector": "[data-dashboard]" }
+  ],
+  "pages": [
+    {
+      "name": "homepage",
+      "path": "/",
+      "designImage": "designs/homepage-desktop.png",
+      "actions": [
+        { "type": "waitForSelector", "selector": "[data-test=hero]" }
+      ]
+    },
+    {
+      "name": "checkout",
+      "path": "/checkout",
+      "designImage": "designs/checkout-desktop.png"
+    }
+  ]
+}

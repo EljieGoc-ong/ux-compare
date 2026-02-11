@@ -1,0 +1,27 @@
+{
+  "baseUrl": "http://localhost:8080",
+  "outputDir": "output",
+  "threshold": 0.1,
+  "viewports": [
+    { "name": "desktop", "width": 1440, "height": 900, "deviceScaleFactor": 1 },
+    { "name": "mobile", "width": 390, "height": 844, "deviceScaleFactor": 2 }
+  ],
+  "globalActions": [
+    { "type": "goto", "url": "/" },
+    { "type": "waitForSelector", "selector": "#email", "options": { "state": "visible", "timeout": 10000 } },
+    { "type": "type", "selector": "#email", "text": "admin@example.com" },
+    { "type": "type", "selector": "#password", "text": "password123" },
+    { "type": "click", "selector": "form button[type='submit']", "waitForNavigation": true },
+    { "type": "waitForTimeout", "timeout": 5000 }
+  ],
+  "pages": [
+    {
+      "name": "dashboard",
+      "path": "/",
+      "designImage": "designs/dashboard.png",
+      "actions": [
+        { "type": "waitForTimeout", "timeout": 2000 }
+      ]
+    }
+  ]
+}
