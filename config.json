@@ -2,7 +2,7 @@
   "baseUrl": "http://localhost:8080",
   "outputDir": "output",
   "threshold": 0.1,
-  "failureThreshold": 5.0,
+  "failureThreshold": 5,
   "viewports": [
     { "name": "desktop", "width": 1440, "height": 900, "deviceScaleFactor": 1 },
     { "name": "mobile", "width": 390, "height": 844, "deviceScaleFactor": 2 }
@@ -19,7 +19,10 @@
     {
       "name": "dashboard",
       "path": "/",
-      "designImage": "designs/dashboard.png",
+      "designImages": {
+        "desktop": "designs/dashboard.png",
+        "mobile": "designs/dashboard-mobile.png"
+      },
       "actions": [
         { "type": "waitForTimeout", "timeout": 2000 }
       ]

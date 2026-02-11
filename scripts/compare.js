@@ -64,7 +64,14 @@ const resolveConfig = async () => {
   }
   const configDir = path.dirname(configPath);
   const userConfig = await readJson(configPath);
-  return { configDir, configPath, config: { ...DEFAULT_CONFIG, ...userConfig } };
+  const config = { ...DEFAULT_CONFIG, ...userConfig };
+
+  // Ensure baseUrl ends with / for consistent URL resolution
+  if (config.baseUrl && !config.baseUrl.endsWith('/')) {
+    config.baseUrl = config.baseUrl + '/';
+  }
+
+  return { configDir, configPath, config };
 };
 
 const resolveDesignPath = (configDir, designImage) =>
@@ -192,10 +199,11 @@ const runActions = async (page, actions, baseUrl) => {
         while (retries > 0) {
           try {
             const options = action.options || {};
-            // Convert Puppeteer options to Playwright
+            // Convert Puppeteer options to Playwright (support both state string and visible/hidden booleans)
+            const state = options.state ?? (options.visible ? 'visible' : options.hidden ? 'hidden' : 'attached');
             const playwrightOptions = {
               timeout: options.timeout,
-              state: options.visible ? 'visible' : (options.hidden ? 'hidden' : 'attached')
+              state
             };
             await page.waitForSelector(action.selector, playwrightOptions);
             break;
@@ -327,12 +335,15 @@ const captureScreenshots = async (browser, config, configDir) => {
         throw error;
       }
 
+      // Prefer viewport-specific design; fall back to shared designImage
+      const designImage = entry.designImages?.[viewport.name] ?? entry.designImage;
+
       results.push({
         name,
         viewport: viewport.name,
         url,
         screenshotPath,
-        designImage: entry.designImage
+        designImage
       });
     }
   }

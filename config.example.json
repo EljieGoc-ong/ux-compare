@@ -2,17 +2,44 @@
   "baseUrl": "http://localhost:5173/",
   "outputDir": "output",
   "threshold": 0.1,
-  "failureThreshold": 1.0,
+  "failureThreshold": 1,
   "viewports": [
-    { "name": "desktop", "width": 1440, "height": 900, "deviceScaleFactor": 1 },
-    { "name": "mobile", "width": 390, "height": 844, "deviceScaleFactor": 2 }
+    {
+      "name": "desktop",
+      "width": 1440,
+      "height": 900,
+      "deviceScaleFactor": 1
+    },
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 2
+    }
   ],
   "globalActions": [
-    { "type": "goto", "url": "/login" },
-    { "type": "type", "selector": "[name=email]", "text": "qa@example.com" },
-    { "type": "type", "selector": "[name=password]", "text": "password123" },
-    { "type": "click", "selector": "button[type=submit]" },
-    { "type": "waitForSelector", "selector": "[data-dashboard]" }
+    {
+      "type": "goto",
+      "url": "/login"
+    },
+    {
+      "type": "type",
+      "selector": "[name=email]",
+      "text": "qa@example.com"
+    },
+    {
+      "type": "type",
+      "selector": "[name=password]",
+      "text": "password123"
+    },
+    {
+      "type": "click",
+      "selector": "button[type=submit]"
+    },
+    {
+      "type": "waitForSelector",
+      "selector": "[data-dashboard]"
+    }
   ],
   "pages": [
     {
@@ -20,13 +47,24 @@
       "path": "/",
       "designImage": "designs/homepage-desktop.png",
       "actions": [
-        { "type": "waitForSelector", "selector": "[data-test=hero]" }
-      ]
+        {
+          "type": "waitForSelector",
+          "selector": "[data-test=hero]"
+        }
+      ],
+      "designImages": {
+        "desktop": "designs/homepage-desktop.png",
+        "mobile": "designs/homepage-mobile.png"
+      }
     },
     {
       "name": "checkout",
       "path": "/checkout",
-      "designImage": "designs/checkout-desktop.png"
+      "designImage": "designs/checkout-desktop.png",
+      "designImages": {
+        "desktop": "designs/checkout-desktop.png",
+        "mobile": "designs/checkout-mobile.png"
+      }
     }
   ]
 }
