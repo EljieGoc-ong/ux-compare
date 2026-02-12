@@ -3,7 +3,20 @@
   "outputDir": "output",
   "threshold": 0.1,
   "failureThreshold": 1,
+  "comment": "The 'name' property in each viewport is used as the key in 'designImages' to map designs to viewports",
   "viewports": [
+    {
+      "name": "mobile",
+      "width": 390,
+      "height": 844,
+      "deviceScaleFactor": 2
+    },
+    {
+      "name": "tablet",
+      "width": 768,
+      "height": 1024,
+      "deviceScaleFactor": 2
+    },
     {
       "name": "desktop",
       "width": 1440,
@@ -11,10 +24,10 @@
       "deviceScaleFactor": 1
     },
     {
-      "name": "mobile",
-      "width": 390,
-      "height": 844,
-      "deviceScaleFactor": 2
+      "name": "desktop-xl",
+      "width": 1920,
+      "height": 1080,
+      "deviceScaleFactor": 1
     }
   ],
   "globalActions": [
@@ -53,8 +66,10 @@
         }
       ],
       "designImages": {
+        "mobile": "designs/homepage-mobile.png",
+        "tablet": "designs/homepage-tablet.png",
         "desktop": "designs/homepage-desktop.png",
-        "mobile": "designs/homepage-mobile.png"
+        "desktop-xl": "designs/homepage-desktop-xl.png"
       }
     },
     {
@@ -62,9 +77,10 @@
       "path": "/checkout",
       "designImage": "designs/checkout-desktop.png",
       "designImages": {
-        "desktop": "designs/checkout-desktop.png",
-        "mobile": "designs/checkout-mobile.png"
-      }
+        "mobile": "designs/checkout-mobile.png",
+        "desktop": "designs/checkout-desktop.png"
+      },
+      "comment": "Note: tablet and desktop-xl designs omitted - they will be skipped if no design file exists"
     }
   ]
 }

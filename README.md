@@ -45,7 +45,10 @@ Copy `config.example.json` to `config.json` and customize:
     {
       "name": "dashboard",
       "path": "/dashboard",
-      "designImage": "designs/dashboard.png",
+      "designImages": {
+        "desktop": "designs/dashboard-desktop.png",
+        "mobile": "designs/dashboard-mobile.png"
+      },
       "actions": [
         { "type": "waitForTimeout", "timeout": 2000 }
       ]
@@ -123,6 +126,57 @@ The tool uses two threshold values to give you fine-grained control over what co
   "actions": []
 }
 ```
+
+### Multiple Viewports and Design Mapping
+
+When testing multiple viewports, use the `designImages` object to map each viewport to its corresponding design file. The **viewport `name`** is used as the key in the `designImages` object.
+
+#### Important Notes:
+- ✅ The `name` property in each viewport configuration is the identifier
+- ✅ Use the same `name` as the key in `designImages` for each page
+- ✅ You can have as many viewports as needed (mobile, tablet, desktop, desktop-xl, etc.)
+- ✅ Not every page needs designs for every viewport - omit keys for missing designs
+- ✅ Missing designs will be skipped (screenshot will still be captured)
+
+#### Example with 4 Viewports:
+
+```json
+{
+  "viewports": [
+    { "name": "mobile", "width": 390, "height": 844, "deviceScaleFactor": 2 },
+    { "name": "tablet", "width": 768, "height": 1024, "deviceScaleFactor": 2 },
+    { "name": "desktop", "width": 1440, "height": 900, "deviceScaleFactor": 1 },
+    { "name": "desktop-xl", "width": 1920, "height": 1080, "deviceScaleFactor": 1 }
+  ],
+  "pages": [
+    {
+      "name": "homepage",
+      "path": "/",
+      "designImages": {
+        "mobile": "designs/homepage-mobile.png",
+        "tablet": "designs/homepage-tablet.png",
+        "desktop": "designs/homepage-desktop.png",
+        "desktop-xl": "designs/homepage-desktop-xl.png"
+      }
+    },
+    {
+      "name": "checkout",
+      "path": "/checkout",
+      "designImages": {
+        "mobile": "designs/checkout-mobile.png",
+        "desktop": "designs/checkout-desktop.png"
+      }
+    }
+  ]
+}
+```
+
+In this example:
+- **homepage** has designs for all 4 viewports - all will be compared
+- **checkout** only has designs for mobile and desktop - tablet and desktop-xl screenshots will be captured but comparison will be skipped
+
+#### Legacy `designImage` Format:
+The single `designImage` property is still supported for backwards compatibility but only works with one viewport. Use `designImages` (plural) for multi-viewport testing.
 
 ## Action Types
 
@@ -517,6 +571,8 @@ npm run compare -- --config config.staging.json
 
 ### Custom Viewport Presets
 
+You can define as many viewports as needed for your testing requirements:
+
 ```json
 {
   "viewports": [
@@ -528,6 +584,8 @@ npm run compare -- --config config.staging.json
   ]
 }
 ```
+
+**Important**: Remember to use the viewport `name` values as keys in your `designImages` object for each page. See [Multiple Viewports and Design Mapping](#multiple-viewports-and-design-mapping) for details on how to map designs to viewports.
 
 ## License
 
